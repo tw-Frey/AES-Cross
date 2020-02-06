@@ -1,55 +1,51 @@
-# A real cross platform AES encryption-decryption solution. Support Java,C,nodeJs,Android,IOS...
-[![Build Status](https://travis-ci.org/keel/aes-cross.svg?branch=master)](https://travis-ci.org/keel/aes-cross)
+# 跨平台的AES加密/解密方案. 支持 Java,C,nodeJs,Android,IOS...
 
-[中文说明](https://github.com/keel/aes-cross/tree/master/info-cn)
+## 为什么用AES?
+* 简单: 对称加密算法
+* 安全: 比 3DES 等其他对称算法更安全
+* 快速: 在相同安全性下比其他算法速度更快
+* 二进制: 支持二进制加密,也同时支持文本
 
-## Why AES?
-* Simple: aymmetric encryption
-* Secure: better than 3DES and others
-* Fast: faster than others on same security level
-* Binary support: not only texts
+## 怎样实现跨平台?
+AES的算法本身是跨平台的,只不过以下这些要素决定了跨平台不是那么简单:
+* **加密模式**: ECB,CBC,CFB,OFB,CTR,XTS...
+* **密钥长度**: 128, 256
+* **iv向量**: 需要与密钥同时设置
+* **padding**: NoPadding,ZeroPadding,PKCS5Padding,ISO10126Padding,ANSI X.923,SSL3Padding...
+* **密钥**: 用于加解密的key
 
-## How to cross platform?
-The AES algorithm is same on all platform, but there are some factors make it difficult to do so:
-* **cipher mode**: ECB,CBC,CFB,OFB,CTR,XTS...
-* **key size**: 128, 256
-* **iv**: init vector
-* **padding**: NoPadding,ZeroPadding,PKCS5Padding,ISO10126Padding,ANSI X.923...
-* **key**: the key for encription and decryption
+只有当这5个要素都完全一致时,AES的加密和解密才可以在任何地方通用,也就是实现跨平台.
+一般的编程语言会支持ECB,CBC,CFB这几种常见的加密模式,以及128的密钥长度,但在padding的处理方式上,各个语言的区别就太大了,而且这个padding与加密模式也存在紧密的关联.
 
-Only all these 5 things are exactly the same can the AES encription and decryption be used anywhere.
-Most language supports ECB,CBC,CFB cipher mode (CBC is used widely), and all key sizes(128 is used widely).
-But the padding mode is different in different platforms, and it's also effected by cipher mode.
+## 处理Padding问题
+AES的一些加密模式需要原文的bytes数是16的倍数,以下是信息表:
+[更多信息可以点击查WIKI](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Electronic_codebook_.28ECB.29)
 
-## Figure out the Padding
-Some cipher mode only support bytes multiple of 16, so there are paddings to fix it.
-[WIKI for more](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Electronic_codebook_.28ECB.29)
-
-encription/cipher/padding|multiple of 16 encryption result size|not multiple of 16 encryption result size
+算法/模式/填充            |16字节加密后数据长度|不满16字节加密后长度
 -------------------------|---------------|-------------------
-AES/CBC/NoPadding        |     16        |   not support
+AES/CBC/NoPadding        |     16        |   不支持
 AES/CBC/PKCS5Padding     |     32        |   16
 AES/CBC/ISO10126Padding  |     32        |   16
-AES/CFB/NoPadding        |     16        |   original size
+AES/CFB/NoPadding        |     16        |   原始数据长度
 AES/CFB/PKCS5Padding     |     32        |   16
 AES/CFB/ISO10126Padding  |     32        |   16
-AES/ECB/NoPadding        |     16        |   not support
+AES/ECB/NoPadding        |     16        |   不支持
 AES/ECB/PKCS5Padding     |     32        |   16
 AES/ECB/ISO10126Padding  |     32        |   16
-AES/OFB/NoPadding        |     16        |   original size
+AES/OFB/NoPadding        |     16        |   原始数据长度
 AES/OFB/PKCS5Padding     |     32        |   16
 AES/OFB/ISO10126Padding  |     32        |   16
-AES/PCBC/NoPadding       |     16        |   not support
+AES/PCBC/NoPadding       |     16        |   不支持
 AES/PCBC/PKCS5Padding    |     32        |   16
 AES/PCBC/ISO10126Padding |     32        |   16
 
-## The Solution
+## 解决方案
 1. AES/CFB/NoPadding or AES/OFB/NoPadding or AES/CTR/NoPadding
 
-  It works,but the security is a question and not good for concurrent computation, so passed.
+  可以用,但安全性堪忧,且不利于并行计算,不建议采用.
 2. **AES/CBC/PKCS5Padding**
 
-  Good choice! **SSL,IPSec** use it too! And **PKCS5Padding** is well supported for most big platforms, such as:
+  不错!,**SSL,IPSec**也在用这种方式,然后我们选择 **PKCS5Padding** 做为padding,因为几个大的语言直接支持这种方式,如:
   * JAVA/Android (PKCS5Padding)
   * ObjectC/IOS (PKCS7Padding)
   * C# (PKCS7Padding)
@@ -57,81 +53,19 @@ AES/PCBC/ISO10126Padding |     32        |   16
   * Python (pycrypto)
   * PHP (mcrypt)
 
-  You don't need any extra code on these platforms, just make sure using **AES/CBC/PKCS5Padding** ,and **same iv, same key**, the encription and decription will cross platforms.
-  There're some platform don't support **PKCS5Padding** , that's the project to resolve it.
+  以上这些语言配置**PKCS5Padding**后,使用**相同的iv和key**即可在不同平台间通用.
 
-> PKCS7Padding = PKCS5Padding on AES,don't worry about it.
+  一些语言可能没有直接的支持方式,所以本项目来实现了这些平台的 **PKCS5Padding** ,以此来支持AES的跨平台.
 
-> [What is PKCS5Padding?](https://en.wikipedia.org/wiki/Padding_%28cryptography%29#PKCS7)
+  (注:**PKCS7Padding** 与 **PKCS5Padding** 在AES算法中是相同的)
 
-Some cross platform solution choose ZeroPadding on CBC mode.The decryption result may have some unnecessary bytes, because the decryption result bytes must be multiple of 16, and it's hard to be cut because the original plaintext size is unknown.
-
-# The key point!
-If you find a way to **AES/CBC/PKCS5Padding** on a platform, you have already got the cross-platform AES solution on it.
+  [什么是PKCS5Padding?](https://en.wikipedia.org/wiki/Padding_%28cryptography%29#PKCS7)
 
 
-# NodeJs
+另外,有一些AES跨平台的算法使用了非CFB/OFB/CTR模式,而且同时使用zeroPadding方案,这会导致解密出来的结果比真正的原文多几个字节,因为解密的结果肯定是16的倍数,而原文不一定是.而这些多余的字节没有办法去除,因为解密的一方是不知道原文的bytes长度的.
 
-## Installation
-```javascript
-npm install aes-cross --save
-```
+# 跨平台的关键!
+只要你实现了 **AES/CBC/PKCS5Padding** , 你就能够在这个语言/平台上畅通无阻的实现与其他平台/语言的AES通用的加解密能力.
 
-## Usage
-* default keySize : 128;
-* default iv : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-* default text inputEncoding : 'utf-8';
-* default text outputEncoding : 'base64';
 
-```javascript
-var aes = require('aes-cross');
-var testTxt = 'asdfW  #)(ssff234';
-var key = new Buffer([1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6]);
-/**
- * encText/decText : text encription
- * @param  {string} text
- * @param  {Buffer} key         the length must be 16 or 32
- * @param  {Buffer} [newIv]       optional,default is [0,0...0]
- * @param  {string} [input_encoding]  optional,"utf8" -default,"ascii","base64","binary"...(https://nodejs.org/api/buffer.html#buffer_buffer)
- * @param  {string} [output_encoding] optional,"base64" -default,"hex"...
- * @return {string}                 encription result
- */
-var enc = aes.encText(testTxt,key);
-console.log('enc:%s',enc);
-var dec = aes.decText(enc,key);
-console.log('dec:%s',dec);
 
-// for buffer
-var testBuff = new Buffer([23,42,55,11,33,45,55]);
-/**
- * encBytes/decBytes: buffer/bytes encription
- * @param  {Buffer} buff
- * @param  {Buffer} key  the length must be 16 or 32
- * @param  {Buffer} [newIv]   optional,default is [0,0...0]
- * @return {Buffer}
- */
-var encBuff = aes.encBytes(testBuff,key);
-console.dir(encBuff);
-var decBuff = aes.decBytes(encBuff,key);
-console.dir(decBuff);
-```
-
-## Custom keysize,iv,encoding
-```javascript
-var iv = new Buffer([1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6]);
-var key = new Buffer([1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6]);
-var enc = aes.encText(testTxt,key,iv);
-console.log('enc:%s',enc);
-
-//change key size ,default is 128
-key = Buffer.concat([key,key]);
-aes.setKeySize(256);
-
-//change input encoding
-enc = aes.encText(testTxt,key,iv,'ascii');
-dec = aes.decText(encTxt,key,iv,'ascii');
-
-//change output encoding
-enc = aes.encText(testTxt,key,null,'utf-8','hex');
-dec = aes.decText(enc,key,null,'utf-8','hex');
-```
